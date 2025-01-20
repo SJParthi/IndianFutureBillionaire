@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.springframework.boot' version '3.1.4'
+    id 'io.spring.dependency-management' version '1.1.3'
+}
+
+group = 'com.indianfuturebillionaire'
+version = '1.0.0-SNAPSHOT'
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+repositories {
+    mavenCentral()
+
+    // Zerodha’s official repository
+    maven {
+        url 'https://repo.zerodha.tech/'
+    }
+}
+
+dependencies {
+    // Spring Boot Web + Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // ----- SPRING SECURITY -----
+//    implementation 'org.springframework.boot:spring-boot-starter-security'  // For HttpSecurity, SecurityFilterChain
+
+    // Scheduling
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // AWS (Secrets Manager, SNS, SES)
+    implementation 'software.amazon.awssdk:secretsmanager:2.20.34'
+    implementation 'software.amazon.awssdk:sns:2.20.34'
+    implementation 'software.amazon.awssdk:ses:2.20.34'
+
+    // Zerodha Java library => 3.4.0
+    implementation 'com.zerodhatech.kiteconnect:kiteconnect:3.4.0'
+
+    // ----- LMAX DISRUPTOR -----
+    implementation 'com.lmax:disruptor:3.4.4'
+    // This covers imports like com.lmax.disruptor.*, com.lmax.disruptor.dsl.Disruptor
+
+    // Jackson, etc.
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+
+    // YAML + Thymeleaf
+    implementation 'org.springframework.boot:spring-boot-configuration-processor'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    // Scheduling
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // Tests
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+application {
+    mainClass = 'com.indianfuturebillionaire.kitebot.IndianFutureBillionaireBotApplication'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}

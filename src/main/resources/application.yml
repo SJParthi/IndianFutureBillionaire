@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework: INFO
+    com.indianfuturebillionaire: DEBUG
+
+aggregator:
+  default-timeframe: "1m"
+  enable-partial-bars: true
+  partial-bar-threshold-percent: 0.3
+  quiet-zone-threshold-minutes: 5
+  multi-timeframes: ["1m","5m"]
+  sub-cycle: true
+  bar-merge-threshold-volume: 10
+  bar-lock-extreme: true
+  bar-soft-close-seconds: 1
+  bar-finalize-grace-seconds: 2
+
+risk:
+  daily-limit: 50000
+  kill-switch: false
+  meltdown-threshold: 1000
+  meltdown-ring-buffer-usage-threshold: 0.8
+
+
+indexes:
+  preload: ["NIFTY50", "NIFTY100", "NIFTY500", "NIFTYMIDCAP100", "NIFTYSMALLCAP100"]

@@ -1,0 +1,22 @@
+/* File: src/main/resources/static/css/hpc-dashboard.css */
+/* HPC meltdown synergy styling: blinking meltdown banner, meltdown logs panel, etc. */
+
+/* Blinking meltdown banner if meltdownActive is true */
+.meltdown-blink {
+  animation: meltdownBlink 1s infinite;
+}
+
+@keyframes meltdownBlink {
+  0%   { background-color: #f8d7da; }
+  50%  { background-color: #ffffff; }
+  100% { background-color: #f8d7da; }
+}
+
+/* meltdown logs panel with a scroll */
+.meltdown-logs-panel {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #fafafa;
+  padding: 10px;
+  border: 1px solid #ccc;
+}

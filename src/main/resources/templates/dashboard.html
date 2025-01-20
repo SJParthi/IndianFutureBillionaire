@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>HPC Meltdown Aggregator Dashboard</title>
+    <!-- HPC meltdown synergy CSS -->
+    <link rel="stylesheet" th:href="@{/css/hpc-dashboard.css}" />
+    <!-- For convenience, load bootstrap for styling -->
+    <link rel="stylesheet"
+          th:href="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css}" />
+    <!-- Chart.js for meltdown usage or aggregator concurrency visuals -->
+    <script th:src="@{https://cdn.jsdelivr.net/npm/chart.js}"></script>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h2>HPC Aggregator Dashboard (MicroInch meltdown synergy)</h2>
+    <p>This page is accessible only with your HPC aggregator credentials.</p>
+
+    <!-- meltdown banner -->
+    <div th:if="${meltdownActive}" class="alert alert-danger meltdown-blink">
+        <strong>MELTDOWN ACTIVE!</strong> aggregator skip logic
+    </div>
+    <div th:if="${!meltdownActive}" class="alert alert-success">
+        <strong>No meltdown</strong> => HPC aggregator normal mode
+    </div>
+
+    <!-- HPC aggregator ring buffer usage / feed rate -->
+    <div class="row mb-2">
+        <div class="col-sm-4">
+            <strong>Ring Buffer Usage:</strong>
+            <span th:text="${ringBufUsagePct}">0</span>%
+        </div>
+        <div class="col-sm-4">
+            <strong>Feed Rate (ticks/sec):</strong>
+            <span th:text="${feedRate}">0</span>
+        </div>
+        <div class="col-sm-4">
+            <strong>WebSocket Count:</strong>
+            <span th:text="${websocketCount}">0</span>
+        </div>
+    </div>
+
+    <!-- Active Indexes -->
+    <div class="mb-3">
+        <strong>Active Indexes:</strong>
+        <ul>
+            <li th:each="idx : ${activeIndexes}" th:text="${idx}">N/A</li>
+        </ul>
+    </div>
+
+    <!-- meltdown logs (collapsible) -->
+    <button class="btn btn-warning" type="button" data-bs-toggle="collapse"
+            data-bs-target="#meltdownLogs">
+        Meltdown Logs
+    </button>
+    <div id="meltdownLogs" class="collapse mt-2 meltdown-logs-panel">
+        <ul>
+            <li th:each="log : ${meltdownLogs}" th:text="${log}"></li>
+        </ul>
+    </div>
+
+    <hr/>
+
+    <!-- aggregator concurrency chart -->
+    <h5>Aggregator Concurrency Stats</h5>
+    <canvas id="concurrencyChart" width="600" height="300"></canvas>
+
+    <hr/>
+
+    <!-- Tabs for top gainers, losers, volume, intraday -->
+    <ul class="nav nav-tabs" id="dashTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#gainersTab">Top Gainers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#losersTab">Top Losers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#volumeTab">Top by Volume</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#intradayTab">Intraday</a>
+        </li>
+    </ul>
+    <div class="tab-content border p-3">
+        <!-- Gainers -->
+        <div class="tab-pane fade show active" id="gainersTab">
+            <table class="table table-sm table-bordered">
+                <thead>
+                <tr>
+                    <th>Symbol</th><th>Price</th><th>PrevClose</th><th>%Change</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sc : ${topGainers}">
+                    <td th:text="${sc.symbolOrToken}">N/A</td>
+                    <td th:text="${sc.ltp}">0</td>
+                    <td th:text="${sc.prevClose}">0</td>
+                    <td th:text="${sc.percentChange}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Losers -->
+        <div class="tab-pane fade" id="losersTab">
+            <table class="table table-sm table-bordered">
+                <thead>
+                <tr>
+                    <th>Symbol</th><th>Price</th><th>PrevClose</th><th>%Change</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sc : ${topLosers}">
+                    <td th:text="${sc.symbolOrToken}">N/A</td>
+                    <td th:text="${sc.ltp}">0</td>
+                    <td th:text="${sc.prevClose}">0</td>
+                    <td th:text="${sc.percentChange}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Volume -->
+        <div class="tab-pane fade" id="volumeTab">
+            <table class="table table-sm table-bordered">
+                <thead>
+                <tr>
+                    <th>Symbol</th><th>Price</th><th>Volume</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sc : ${topVolume}">
+                    <td th:text="${sc.symbolOrToken}">N/A</td>
+                    <td th:text="${sc.ltp}">0</td>
+                    <td th:text="${sc.volume}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Intraday -->
+        <div class="tab-pane fade" id="intradayTab">
+            <table class="table table-sm table-bordered">
+                <thead>
+                <tr>
+                    <th>Symbol</th><th>Price</th><th>%Change</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sc : ${topIntraday}">
+                    <td th:text="${sc.symbolOrToken}">N/A</td>
+                    <td th:text="${sc.ltp}">0</td>
+                    <td th:text="${sc.percentChange}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <hr/>
+
+    <!-- Index selection dropdown, like screenshot -->
+    <h5>Choose Index</h5>
+    <select id="indexDropdown" class="form-select w-auto">
+        <option th:each="idx : ${preloadedIndexes}"
+                th:value="${idx}"
+                th:text="${idx}"></option>
+    </select>
+
+</div>
+
+<!-- HPC concurrency stats in JSON => concurrencyStatsJson -->
+<script th:inline="javascript">
+/*[[
+let concurrencyStatsJson = [[${concurrencyStatsJson}]];
+]]*/
+</script>
+
+<!-- Our custom HPC meltdown synergy JS -->
+<script th:src="@{/js/hpc-dashboard.js}"></script>
+<!-- Bootstrap bundle for tabs, collapse, etc. -->
+<script th:src="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js}"></script>
+
+</body>
+</html>
