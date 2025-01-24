@@ -1,6 +1,6 @@
 package com.indianfuturebillionaire.kitebot.service;
 
-import com.indianfuturebillionaire.kitebot.feed.MultipleWebSocketManager;
+import com.indianfuturebillionaire.kitebot.feed.WebSocketManager;
 import com.indianfuturebillionaire.kitebot.risk.RiskManagerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,11 +15,11 @@ public class MarketCloseScheduler {
 
     private static final Logger logger = LoggerFactory.getLogger(MarketCloseScheduler.class);
 
-    private final MultipleWebSocketManager wsManager;
+    private final WebSocketManager wsManager;
     private final RiskManagerService riskManager;
     // aggregator manager if you want to flush
 
-    public MarketCloseScheduler(MultipleWebSocketManager w, RiskManagerService r) {
+    public MarketCloseScheduler(WebSocketManager w, RiskManagerService r) {
         this.wsManager = w;
         this.riskManager= r;
     }

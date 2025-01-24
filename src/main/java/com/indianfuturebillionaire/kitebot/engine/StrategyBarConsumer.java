@@ -3,19 +3,15 @@ package com.indianfuturebillionaire.kitebot.engine;
 import com.indianfuturebillionaire.kitebot.model.Bar;
 import com.indianfuturebillionaire.kitebot.risk.RiskManagerService;
 import com.indianfuturebillionaire.kitebot.service.MarketDataService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/***********************************************************************
- * HPC bar consumer => logs final bars, updates real-time LTP,
- * triggers meltdown if volume crosses meltdownThreshold
- * or if ring buffer usage is too high (optional).
- ***********************************************************************/
+/**
+ * HPC meltdown synergy => final bar consumer => ephemeral aggregator => meltdown skip => updates MarketDataService
+ */
 @Service
 public class StrategyBarConsumer implements BarConsumer {
-
     private static final Logger logger = LoggerFactory.getLogger(StrategyBarConsumer.class);
 
     private final RiskManagerService riskManager;
@@ -32,15 +28,17 @@ public class StrategyBarConsumer implements BarConsumer {
 
     @Override
     public void onBarFinalized(Bar bar) {
-        logger.debug("onBarFinalized => token={}, tf={}, reason={}, O/H/L/C={}/{}/{}/{}, vol={}",
-                bar.getInstrumentToken(), bar.getTimeframe(), bar.getReason(),
+        logger.debug("onBarFinalized => ephemeral aggregator => token={}, tf={}, reason={}, O/H/L/C={}/{}/{}/{}, vol={}",
+                bar.getInstrumentToken(), bar.getCompanyName(), bar.getTimeframe(), bar.getReason(),
                 bar.getOpen(), bar.getHigh(), bar.getLow(), bar.getClose(), bar.getVolume());
 
-        // HPC => update real-time LTP => used by dashboard for top gainers/losers
+        // HPC meltdown synergy => update MarketDataService => used by dashboard => top gainers/losers
         marketDataService.updateLtp(bar.getInstrumentToken(), bar.getClose());
+        marketDataService.updateVolume(bar.getInstrumentToken(), bar.getVolume());
+        // if you have a known prevClose from somewhere => setPrevClose(...) once a day or so
 
-        // meltdown on volume
-        if(bar.getVolume() > meltdownThreshold && !riskManager.isMeltdownActive()) {
+        // meltdown on volume => HPC synergy => aggregator skip
+        if(bar.getVolume()> meltdownThreshold && !riskManager.isMeltdownActive()) {
             logger.warn("barVolume={} > meltdownThreshold={}, meltdown triggered => token={}",
                     bar.getVolume(), meltdownThreshold, bar.getInstrumentToken());
             riskManager.activateMeltdownMode();

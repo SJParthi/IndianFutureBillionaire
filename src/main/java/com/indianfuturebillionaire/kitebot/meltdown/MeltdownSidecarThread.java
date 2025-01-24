@@ -1,34 +1,30 @@
 package com.indianfuturebillionaire.kitebot.meltdown;
 
-import com.indianfuturebillionaire.kitebot.engine.MultiTimeframeAggregatorManager;
+import com.indianfuturebillionaire.kitebot.engine.DoubleBufferAggregatorManager;
 import com.indianfuturebillionaire.kitebot.risk.RiskManagerService;
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 import org.springframework.stereotype.Component;
 
-
 /***********************************************************************
- * HPC meltdown sidecar => runs asynchronously, checking aggregator feed rate
- * or partial bar expansions => triggers meltdown if we predict overload.
- * aggregator remains minimal => sidecar does meltdown logic out of band.
- ***********************************************************************/
+ * HPC meltdown synergy => sidecar => checks feed rate => meltdown if above threshold => aggregator skip
+ */
 @Component
 public class MeltdownSidecarThread implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(MeltdownSidecarThread.class);
 
     private final RiskManagerService riskManager;
-    private final MultiTimeframeAggregatorManager aggregatorManager;
+    private final DoubleBufferAggregatorManager aggregatorManager;
+
     private volatile boolean running = true;
     private Thread sidecarThread;
 
-    // Example HPC => meltdown if feedRate > meltdownSpikeRate
-    // from application.yml => we might get from aggregator props or risk
-    private final long meltdownSpikeThresholdRate = 20000L; // ticks/sec example
+    // HPC meltdown synergy => feedRate meltdown if > meltdownSpikeThresholdRate
+    private long meltdownSpikeThresholdRate = 20000L; // e.g. from config or reference
 
     public MeltdownSidecarThread(RiskManagerService rm,
-                                 MultiTimeframeAggregatorManager mgr) {
+                                 DoubleBufferAggregatorManager mgr) {
         this.riskManager = rm;
         this.aggregatorManager = mgr;
     }
@@ -36,19 +32,16 @@ public class MeltdownSidecarThread implements Runnable {
     @PostConstruct
     public void startSidecar() {
         sidecarThread = new Thread(this, "HPCMeltdownSidecar");
-        sidecarThread.setDaemon(true); // HPC meltdown synergy => background
+        sidecarThread.setDaemon(true);
         sidecarThread.start();
     }
 
     @Override
     public void run() {
-        // HPC meltdown synergy => loop every 100ms
         while(running) {
             try {
                 Thread.sleep(100);
-
                 if(!riskManager.isMeltdownActive()) {
-                    // HPC meltdown synergy => check aggregator's feed rate
                     long feedRate = aggregatorManager.getRecentTickRate();
                     if(feedRate > meltdownSpikeThresholdRate) {
                         logger.warn("Sidecar meltdown => feedRate={} > meltdownSpikeThresholdRate={}",
@@ -56,15 +49,12 @@ public class MeltdownSidecarThread implements Runnable {
                         riskManager.activateMeltdownMode();
                     }
                 } else {
-                    // meltdown is active => maybe check if we can recover
-                    // HPC => if aggregator usage is normal for ~some time
                     if(aggregatorManager.isUsageLowForPeriod()) {
                         logger.info("Sidecar meltdown => usage low => deactivate meltdown");
                         riskManager.deactivateMeltdown();
                     }
                 }
-
-            } catch (InterruptedException e) {
+            } catch(InterruptedException e) {
                 logger.warn("Meltdown sidecar interrupted => stopping thread");
                 Thread.currentThread().interrupt();
                 return;
@@ -76,8 +66,6 @@ public class MeltdownSidecarThread implements Runnable {
 
     public void stopSidecar() {
         running = false;
-        if(sidecarThread != null) {
-            sidecarThread.interrupt();
-        }
+        if(sidecarThread!=null) sidecarThread.interrupt();
     }
 }

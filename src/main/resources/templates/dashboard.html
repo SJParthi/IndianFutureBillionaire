@@ -4,10 +4,7 @@
     <title>HPC Meltdown Aggregator Dashboard</title>
     <!-- HPC meltdown synergy CSS -->
     <link rel="stylesheet" th:href="@{/css/hpc-dashboard.css}" />
-    <!-- For convenience, load bootstrap for styling -->
-    <link rel="stylesheet"
-          th:href="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css}" />
-    <!-- Chart.js for meltdown usage or aggregator concurrency visuals -->
+    <link rel="stylesheet" th:href="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css}" />
     <script th:src="@{https://cdn.jsdelivr.net/npm/chart.js}"></script>
 </head>
 <body>
@@ -16,7 +13,6 @@
     <h2>HPC Aggregator Dashboard (MicroInch meltdown synergy)</h2>
     <p>This page is accessible only with your HPC aggregator credentials.</p>
 
-    <!-- meltdown banner -->
     <div th:if="${meltdownActive}" class="alert alert-danger meltdown-blink">
         <strong>MELTDOWN ACTIVE!</strong> aggregator skip logic
     </div>
@@ -28,7 +24,7 @@
     <div class="row mb-2">
         <div class="col-sm-4">
             <strong>Ring Buffer Usage:</strong>
-            <span th:text="${ringBufUsagePct}">0</span>%
+            <span th:text="${ringBufUsagePct}">0</span>
         </div>
         <div class="col-sm-4">
             <strong>Feed Rate (ticks/sec):</strong>
@@ -48,7 +44,6 @@
         </ul>
     </div>
 
-    <!-- meltdown logs (collapsible) -->
     <button class="btn btn-warning" type="button" data-bs-toggle="collapse"
             data-bs-target="#meltdownLogs">
         Meltdown Logs
@@ -61,13 +56,11 @@
 
     <hr/>
 
-    <!-- aggregator concurrency chart -->
     <h5>Aggregator Concurrency Stats</h5>
     <canvas id="concurrencyChart" width="600" height="300"></canvas>
 
     <hr/>
 
-    <!-- Tabs for top gainers, losers, volume, intraday -->
     <ul class="nav nav-tabs" id="dashTabs" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" data-bs-toggle="tab" href="#gainersTab">Top Gainers</a>
@@ -157,27 +150,20 @@
 
     <hr/>
 
-    <!-- Index selection dropdown, like screenshot -->
     <h5>Choose Index</h5>
     <select id="indexDropdown" class="form-select w-auto">
         <option th:each="idx : ${preloadedIndexes}"
                 th:value="${idx}"
                 th:text="${idx}"></option>
     </select>
-
 </div>
 
-<!-- HPC concurrency stats in JSON => concurrencyStatsJson -->
-<script th:inline="javascript">
-/*[[
-let concurrencyStatsJson = [[${concurrencyStatsJson}]];
-]]*/
-</script>
-
-<!-- Our custom HPC meltdown synergy JS -->
+<!--<script th:inline="javascript">-->
+<!--/*[[-->
+<!--let concurrencyStatsJson = [[${concurrencyStatsJson}]];-->
+<!--]]*/-->
+<!--</script>-->
 <script th:src="@{/js/hpc-dashboard.js}"></script>
-<!-- Bootstrap bundle for tabs, collapse, etc. -->
 <script th:src="@{https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js}"></script>
-
 </body>
 </html>

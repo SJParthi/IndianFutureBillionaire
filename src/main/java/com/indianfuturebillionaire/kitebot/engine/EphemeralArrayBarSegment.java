@@ -3,36 +3,44 @@ package com.indianfuturebillionaire.kitebot.engine;
 import com.indianfuturebillionaire.kitebot.model.Bar;
 
 /***********************************************************************
- * HPC ephemeral array => store tick data so we don't rewrite open/high/low
- * every tick. On finalize, we do one pass to get O/H/L/C. meltdown synergy =>
- * aggregator might skip if meltdown is triggered externally.
- ***********************************************************************/
+ * HPC meltdown synergy => ephemeral array => store tick data in an array.
+ * On finalize, do one pass to compute O/H/L/C, volume => meltdown skip if meltdown.
+ */
 public class EphemeralArrayBarSegment {
 
-    private final long token;
-    private final String timeframe;
-    private final double[] prices;      // HPC => store price
-    private final long[] nanos;        // HPC => store event times
-    private int index = 0;
-    private boolean active = true;
+    private final long token;         // HPC meltdown => instrument token
+    private final String timeframe;   // HPC meltdown => timeframe, e.g. "1m"
+
+    private final double[] prices;    // HPC meltdown => store prices for each tick
+    private final long[] nanos;       // HPC meltdown => store event times
+
+    private int index = 0;           // HPC meltdown => how many ticks stored
+    private boolean active = true;   // HPC meltdown => if meltdown skip => might set inactive
     private boolean softClosed = false;
     private boolean subCycleSplitDone = false;
-    private long startNano = 0;
-    private long lastTickNano = 0;
+
+    private long startNano = 0;      // HPC meltdown => time of first tick
+    private long lastTickNano = 0;   // HPC meltdown => time of last tick
 
     public EphemeralArrayBarSegment(long tk, String tf, int capacity) {
         this.token = tk;
         this.timeframe = tf;
+        // HPC meltdown => capacity e.g. 200 => if bar sees more than 200 ticks, we must handle overflow
         this.prices = new double[capacity];
         this.nanos = new long[capacity];
     }
 
+    /**
+     * HPC meltdown synergy => store the new price/time => if meltdown is triggered externally => skip or partial skip
+     */
     public void addTick(double price, long evtNano) {
-        if(!active) return; // HPC meltdown synergy => skip if not active
+        if(!active) return; // HPC meltdown => aggregator skip => do nothing
 
         if(index == 0) {
+            // HPC meltdown => first tick => record startNano
             startNano = evtNano;
         }
+        // HPC meltdown => if index >= capacity => we might do partial meltdown skip or finalize early
         if(index < prices.length) {
             prices[index] = price;
             nanos[index] = evtNano;
@@ -41,9 +49,12 @@ public class EphemeralArrayBarSegment {
         lastTickNano = evtNano;
     }
 
+    /**
+     * HPC meltdown synergy => build final bar => single pass => O(N) => meltdown skip can reduce frequency
+     */
     public Bar buildFinalBar() {
         if(index == 0) {
-            // no ticks => return empty bar
+            // HPC meltdown => no ticks => return empty bar
             Bar bar = new Bar();
             bar.setInstrumentToken(token);
             bar.setTimeframe(timeframe);
@@ -58,7 +69,7 @@ public class EphemeralArrayBarSegment {
             return bar;
         }
 
-        // HPC => single pass to compute O/H/L/C, volume
+        // HPC meltdown synergy => single pass to compute O/H/L => index ticks
         double openPrice = prices[0];
         double highPrice = openPrice;
         double lowPrice  = openPrice;
@@ -68,7 +79,10 @@ public class EphemeralArrayBarSegment {
             if(p > highPrice) highPrice = p;
             if(p < lowPrice)  lowPrice = p;
         }
-        long volume = index; // HPC => each tick => +1 volume
+        // HPC meltdown => volume = # of ticks => index
+        long volume = index;
+
+        // HPC meltdown => build final bar => meltdown skip if meltdown
         Bar bar = new Bar();
         bar.setInstrumentToken(token);
         bar.setTimeframe(timeframe);
@@ -83,8 +97,10 @@ public class EphemeralArrayBarSegment {
         return bar;
     }
 
+    /**
+     * HPC meltdown synergy => reset ephemeral array => ready for new bar
+     */
     public void reset() {
-        // HPC => reset ephemeral array => ready for next usage
         index = 0;
         active = true;
         softClosed = false;
@@ -97,7 +113,7 @@ public class EphemeralArrayBarSegment {
         active = false;
     }
 
-    // HPC getters
+    // HPC meltdown synergy => getters
     public boolean isActive() { return active; }
     public boolean isSoftClosed() { return softClosed; }
     public void setSoftClosed(boolean s) { this.softClosed = s; }
@@ -107,5 +123,8 @@ public class EphemeralArrayBarSegment {
 
     public long getStartNano() { return startNano; }
     public long getLastTickNano() { return lastTickNano; }
-    public double getOpenPrice() { return (index>0) ? prices[0] : 0; }
+    public double getOpenPrice() {
+        if(index>0) return prices[0];
+        return 0;
+    }
 }

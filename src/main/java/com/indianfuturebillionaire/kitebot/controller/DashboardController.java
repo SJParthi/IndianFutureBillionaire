@@ -1,50 +1,42 @@
 package com.indianfuturebillionaire.kitebot.controller;
 
-import com.indianfuturebillionaire.kitebot.feed.MultipleWebSocketManager;
-import com.indianfuturebillionaire.kitebot.engine.MultiTimeframeAggregatorManager;
+import com.indianfuturebillionaire.kitebot.engine.DoubleBufferAggregatorManager;
 import com.indianfuturebillionaire.kitebot.risk.RiskManagerService;
+import com.indianfuturebillionaire.kitebot.feed.WebSocketManager;
 import com.indianfuturebillionaire.kitebot.service.MarketDataService;
 import com.indianfuturebillionaire.kitebot.service.MarketDataService.StockChange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Controller; // HPC meltdown => must be @Controller, not @RestController
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/***********************************************************************
- * HPC meltdown aggregator front-end controller.
- *
- *  - Gathers meltdown states (riskManager)
- *  - Aggregator usage (aggregatorManager => feed rate, ring buffer usage, meltdown logs)
- *  - Market data for top gainers/losers/volume/intraday (marketDataService)
- *  - WebSocket info (# connections, active indexes)
- *  - Renders "dashboard.html" with fancy JS/CSS visuals.
- ***********************************************************************/
-@RestController
+/**
+ * HPC meltdown synergy => aggregator front-end => shows meltdown states, aggregator usage,
+ * top gainers/losers from ephemeral aggregator => MarketDataService => meltdown synergy
+ */
+@Controller
 public class DashboardController {
 
     private final MarketDataService marketDataService;
     private final RiskManagerService riskManager;
-    private final MultiTimeframeAggregatorManager aggregatorManager;
+    private final DoubleBufferAggregatorManager aggregatorManager;
+    private WebSocketManager wsManager;
 
-    // Instead of final injection, do a setter or no injection at all.
-    // Only inject if truly necessary:
-    private MultipleWebSocketManager wsManager;
+    @Value("${indexes.preload:}")
+    private List<String> preloadedIndexes;
 
     @Autowired
-    public void setMultipleWebSocketManager(MultipleWebSocketManager wsm) {
+    public void setMultipleWebSocketManager(WebSocketManager wsm) {
         this.wsManager = wsm;
     }
 
-    @Value("${indexes.preload:}")
-    private List<String> preloadedIndexes; // e.g. ["NIFTY 50", "NIFTY 100", "NIFTY 500"]
-
+    @Autowired
     public DashboardController(MarketDataService mds,
                                RiskManagerService rm,
-                               MultiTimeframeAggregatorManager am) {
+                               DoubleBufferAggregatorManager am) {
         this.marketDataService = mds;
         this.riskManager = rm;
         this.aggregatorManager = am;
@@ -52,28 +44,28 @@ public class DashboardController {
 
     @GetMapping("/dashboard")
     public String showDashboard(Model model) {
-        // meltdown state
+        // meltdown state => meltdown skip or aggregator normal
         boolean meltdownActive = riskManager.isMeltdownActive();
 
-        // aggregator ring buffer usage, feed rate
+        // aggregator usage => ringBuf usage, feed rate => ephemeral aggregator synergy
         double ringBufUsagePct = aggregatorManager.getRingBufferUsagePercent();
         long feedRate = aggregatorManager.getRecentTickRate();
 
-        // meltdown logs or concurrency stats => optional
+        // meltdown logs => ephemeral aggregator concurrency stats
         List<String> meltdownLogs = aggregatorManager.getRecentMeltdownLogs();
-        String concurrencyStatsJson = aggregatorManager.getConcurrencyStatsJson();
+        String concurrencyStatsJson = aggregatorManager.getConcurrencyStatsJson(); // partial meltdown stats if you store them
 
-        // top gainer/loser/volume/intraday
+        // HPC meltdown synergy => top gainers, losers, volume, intraday => from MarketDataService
         List<StockChange> topGainers  = marketDataService.getTopGainers(50);
         List<StockChange> topLosers   = marketDataService.getTopLosers(50);
         List<StockChange> topVolume   = marketDataService.getTopByVolume(50);
         List<StockChange> topIntraday = marketDataService.getTopIntraday(50);
 
-        // websockets
+        // HPC meltdown synergy => websockets => meltdown synergy => let user see active indexes
         int websocketCount = wsManager.getActiveWebSocketCount();
         List<String> activeIndexes = wsManager.getActiveIndexes();
 
-        // add to Thymeleaf model
+        // HPC meltdown synergy => put them in thymeleaf model
         model.addAttribute("meltdownActive", meltdownActive);
         model.addAttribute("ringBufUsagePct", ringBufUsagePct);
         model.addAttribute("feedRate", feedRate);
@@ -89,6 +81,7 @@ public class DashboardController {
         model.addAttribute("activeIndexes", activeIndexes);
         model.addAttribute("preloadedIndexes", preloadedIndexes);
 
+        // HPC meltdown synergy => returns thymeleaf template => "dashboard"
         return "dashboard";
     }
 }

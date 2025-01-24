@@ -1,7 +1,7 @@
 package com.indianfuturebillionaire.kitebot.controller;
 
 import com.indianfuturebillionaire.kitebot.config.AWSSecretsConfig;
-import com.indianfuturebillionaire.kitebot.feed.MultipleWebSocketManager;
+import com.indianfuturebillionaire.kitebot.feed.WebSocketManager;
 import com.indianfuturebillionaire.kitebot.model.KiteSecrets;
 import com.zerodhatech.kiteconnect.KiteConnect;
 import com.zerodhatech.kiteconnect.kitehttp.exceptions.KiteException;
@@ -27,13 +27,13 @@ public class KiteLoginController {
     private final KiteSecrets kiteSecrets;
     private final AWSSecretsConfig awsSecretsConfig;
     private final SecretsManagerClient smClient;
-    private final MultipleWebSocketManager wsManager;
+    private final WebSocketManager wsManager;
 
     public KiteLoginController(KiteConnect kc,
                                KiteSecrets ks,
                                AWSSecretsConfig awsCfg,
                                SecretsManagerClient sm,
-                               MultipleWebSocketManager wsm) {
+                               WebSocketManager wsm) {
         this.kiteConnect = kc;
         this.kiteSecrets = ks;
         this.awsSecretsConfig = awsCfg;

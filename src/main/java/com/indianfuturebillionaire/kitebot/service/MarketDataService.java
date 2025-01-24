@@ -1,159 +1,115 @@
 package com.indianfuturebillionaire.kitebot.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/***********************************************************************
- * HPC meltdown aggregator =>
- * MarketDataService is where we store real-time LTP (last traded price),
- * previous close, volume for each instrumentToken or symbol,
- * then compute top gainers, losers, volume, intraday for your dashboard.
- *
- * This version includes the "updateLtp(long,double)" method so
- * "marketDataService.updateLtp(bar.getInstrumentToken(), bar.getClose())"
- * compiles properly in StrategyBarConsumer or aggregator code.
- ***********************************************************************/
+/**
+ * HPC meltdown synergy => store real-time LTP, volume => aggregator -> StrategyBarConsumer -> MarketDataService => dashboard
+ */
 @Service
 public class MarketDataService {
 
     private static final Logger logger = LoggerFactory.getLogger(MarketDataService.class);
 
-    // HPC approach => store LTP keyed by instrumentToken (long)
+    // HPC meltdown synergy => store LTP keyed by token
     private final ConcurrentHashMap<Long, Double> ltpMap = new ConcurrentHashMap<>();
-
-    // optional => if you want to compute %change from a previous close
+    // HPC meltdown synergy => store previous close => for %change
     private final ConcurrentHashMap<Long, Double> prevCloseMap = new ConcurrentHashMap<>();
-
-    // store volumes keyed by instrumentToken
+    // HPC meltdown synergy => store volume => aggregator sets final bar volume
     private final ConcurrentHashMap<Long, Long> volumeMap = new ConcurrentHashMap<>();
 
     public MarketDataService() {
-        logger.info("MarketDataService => created");
+        logger.info("MarketDataService => HPC meltdown synergy => created");
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => aggregator code calls this each time
-     * a bar finalizes or a tick arrives with a new LTP.
-     * "token" is your instrumentToken, "price" is the new LTP or bar close.
-     ***********************************************************************/
     public void updateLtp(long token, double price) {
         ltpMap.put(token, price);
     }
 
-    /***********************************************************************
-     * If you track a "previous close," call this method once you know
-     * the previous day's close or from aggregator logic.
-     ***********************************************************************/
-    public void setPrevClose(long token, double closePrice) {
-        prevCloseMap.put(token, closePrice);
+    public void setPrevClose(long token, double pc) {
+        prevCloseMap.put(token, pc);
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => aggregator or meltdown logic might update
-     * volumes in real time (especially if you track partial bar volumes).
-     ***********************************************************************/
     public void updateVolume(long token, long vol) {
         volumeMap.put(token, vol);
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => top gainers => sorted by %change descending
-     * We compute %change = (ltp - prevClose)/prevClose * 100.
-     * If no prevClose is known, skip or treat it as 0 => no computation.
-     ***********************************************************************/
+    // HPC meltdown synergy => top gainers => sort by %change desc
     public List<StockChange> getTopGainers(int limit) {
-        List<StockChange> list = new ArrayList<>();
-        for(Map.Entry<Long, Double> e : ltpMap.entrySet()) {
-            long token = e.getKey();
+        List<StockChange> out = new ArrayList<>();
+        for(Map.Entry<Long,Double> e : ltpMap.entrySet()) {
+            long t = e.getKey();
             double ltp = e.getValue();
-            double pc  = prevCloseMap.getOrDefault(token, 0.0);
-            long vol   = volumeMap.getOrDefault(token, 0L);
-            if(pc>0.0) {
-                double pct = (ltp - pc)/pc * 100.0;
-                list.add(new StockChange(token, ltp, pc, pct, vol));
+            double pc  = prevCloseMap.getOrDefault(t, 0.0);
+            long v = volumeMap.getOrDefault(t,0L);
+            if(pc>0) {
+                double pct = (ltp - pc)/pc *100.0;
+                out.add(new StockChange("Token-"+t, "caompanyNameHardcoded",ltp, pc, pct, v));
             }
         }
-        // sort descending by %change
-        list.sort((a,b)-> Double.compare(b.percentChange, a.percentChange));
-        if(list.size()>limit) {
-            return list.subList(0, limit);
-        }
-        return list;
+        out.sort((a,b)-> Double.compare(b.percentChange, a.percentChange));
+        if(out.size()>limit) return out.subList(0,limit);
+        return out;
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => top losers => sorted by %change ascending
-     ***********************************************************************/
+    // HPC meltdown synergy => top losers => sort ascending by %change
     public List<StockChange> getTopLosers(int limit) {
-        List<StockChange> list = new ArrayList<>();
-        for(Map.Entry<Long, Double> e : ltpMap.entrySet()) {
-            long token = e.getKey();
+        List<StockChange> out = new ArrayList<>();
+        for(Map.Entry<Long,Double> e : ltpMap.entrySet()) {
+            long t = e.getKey();
             double ltp = e.getValue();
-            double pc  = prevCloseMap.getOrDefault(token, 0.0);
-            long vol   = volumeMap.getOrDefault(token, 0L);
-            if(pc>0.0) {
-                double pct = (ltp - pc)/pc * 100.0;
-                list.add(new StockChange(token, ltp, pc, pct, vol));
+            double pc  = prevCloseMap.getOrDefault(t, 0.0);
+            long v = volumeMap.getOrDefault(t,0L);
+            if(pc>0) {
+                double pct = (ltp - pc)/pc*100.0;
+                out.add(new StockChange("Token-"+t, "caompanyNameHardcoded",ltp, pc, pct, v));
             }
         }
-        // sort ascending => biggest negative first
-        list.sort((a,b)-> Double.compare(a.percentChange, b.percentChange));
-        if(list.size()>limit) {
-            return list.subList(0, limit);
-        }
-        return list;
+        out.sort((a,b)-> Double.compare(a.percentChange,b.percentChange));
+        if(out.size()>limit) return out.subList(0,limit);
+        return out;
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => top by volume => sorted descending by volume
-     ***********************************************************************/
+    // HPC meltdown synergy => top by volume => sort descending by volume
     public List<StockChange> getTopByVolume(int limit) {
-        List<StockChange> list = new ArrayList<>();
+        List<StockChange> out = new ArrayList<>();
         for(Map.Entry<Long, Long> e : volumeMap.entrySet()) {
-            long token = e.getKey();
-            long vol   = e.getValue();
-            double ltp = ltpMap.getOrDefault(token, 0.0);
-            double pc  = prevCloseMap.getOrDefault(token, 0.0);
-            double pct = 0.0;
-            if(pc>0.0) {
-                pct = (ltp - pc)/pc * 100.0;
-            }
-            list.add(new StockChange(token, ltp, pc, pct, vol));
+            long t = e.getKey();
+            long vol = e.getValue();
+            double ltp = ltpMap.getOrDefault(t,0.0);
+            double pc  = prevCloseMap.getOrDefault(t,0.0);
+            double pct = 0;
+            if(pc>0) pct = (ltp - pc)/pc *100.0;
+            out.add(new StockChange("Token-"+t, "caompanyNameHardcoded",ltp, pc, pct, vol));
         }
-        list.sort((a,b)-> Long.compare(b.volume, a.volume));
-        if(list.size()>limit) {
-            return list.subList(0, limit);
-        }
-        return list;
+        out.sort((a,b)-> Long.compare(b.volume,a.volume));
+        if(out.size()>limit) return out.subList(0,limit);
+        return out;
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => top intraday => logic is up to you.
-     * For demonstration, let's reuse top gainers logic.
-     ***********************************************************************/
+    // HPC meltdown synergy => top intraday => e.g. reuse top gainers logic
     public List<StockChange> getTopIntraday(int limit) {
-        // or define your own intraday logic
         return getTopGainers(limit);
     }
 
-    /***********************************************************************
-     * HPC meltdown synergy => a data class representing an instrument's
-     * real-time changes, used in your dashboard.
-     ***********************************************************************/
+    /**
+     * HPC meltdown synergy => data object => matches thymeleaf => sc.symbolOrToken, sc.ltp, sc.prevClose, sc.percentChange, sc.volume
+     */
     public static class StockChange {
-        public long token;
+        public String symbolOrToken;
+        public String companyName;    // new field
         public double ltp;
         public double prevClose;
         public double percentChange;
         public long volume;
 
-        public StockChange(long token, double ltp, double pc, double pct, long vol) {
-            this.token = token;
-            this.ltp   = ltp;
+        public StockChange(String symbolOrToken, String companyName, double ltp, double pc, double pct, long vol) {
+            this.symbolOrToken = symbolOrToken;
+            this.companyName = companyName;
+            this.ltp = ltp;
             this.prevClose = pc;
             this.percentChange = pct;
             this.volume = vol;

@@ -1,24 +1,21 @@
 package com.indianfuturebillionaire.kitebot.risk;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/***********************************************************************
- * HPC meltdown manager => daily limit, meltdown triggers from bar volume,
- * ring buffer usage, or sidecar meltdown approach.
- * We store meltdownActive in an AtomicBoolean => lock-free meltdown toggles.
- ***********************************************************************/
+/**
+ * HPC meltdown synergy => meltdownActive toggles => aggregator skip => daily limit => ring usage threshold
+ */
 @Service
 public class RiskManagerService {
 
     private static final Logger logger = LoggerFactory.getLogger(RiskManagerService.class);
 
-    private final int meltdownThreshold;
-    private final double meltdownRingBufferUsageThreshold;
+    private final int meltdownThreshold;  // e.g. volume meltdown
+    private final double meltdownRingBufferUsageThreshold; // e.g. 0.90 => meltdown if usage>90%
     private final int dailyOrderLimit;
 
     private int orderCount = 0;
@@ -61,7 +58,7 @@ public class RiskManagerService {
 
     public void deactivateMeltdown() {
         if(meltdownActive.compareAndSet(true, false)) {
-            logger.info("Meltdown deactivated => aggregator resumed normal HPC updates");
+            logger.info("Meltdown deactivated => aggregator resumed HPC updates");
         }
     }
 

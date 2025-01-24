@@ -10,37 +10,35 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.Executors;
 
-/***********************************************************************
- * HPC Disruptor config => we pick a large ring buffer (65536)
- * and use BusySpinWaitStrategy for minimal micro-latency.
- * This ensures no ticks are missed by the aggregator
- * as long as HPC environment can keep up.
- ***********************************************************************/
+/**
+ * HPC meltdown synergy => configures LMAX Disruptor with ring buffer size from aggregator properties.
+ * Ensures minimal-latency => BusySpinWaitStrategy, can handle thousands of ticks/sec for sub-10ms usage.
+ */
 @Configuration
 public class DisruptorConfig {
 
-    // HPC => large ring to avoid overflow
-    private static final int RING_BUFFER_SIZE = 65536;
-
     /**
-     * The aggregatorEventHandler is where aggregatorManager.processTick(...)
-     * is invoked. If meltdown triggers, aggregator skip logic still reads
-     * from ring buffer but does minimal updates, ensuring no ticks are
-     * dropped *in code*.
+     * Creates the Disruptor bean => HPC meltdown synergy => ring buffer consumer => aggregator event handler
      */
     @Bean
-    public Disruptor<TickEvent> tickDisruptor(AggregatorEventHandler aggregatorHandler) {
+    public Disruptor<TickEvent> tickDisruptor(AggregatorProperties props,
+                                              AggregatorEventHandler aggregatorHandler) {
+        // HPC meltdown synergy => ring size from aggregator config => e.g. 65536
+        int ringSize = props.getRingBufferSize();
+
+        // Build disruptor => single producer or multi => if multiple websockets => use MULTI
         Disruptor<TickEvent> disruptor = new Disruptor<>(
-                TickEvent::new,              // event factory
-                RING_BUFFER_SIZE,
+                TickEvent::new,                // event factory => HPC meltdown synergy minimal overhead
+                ringSize,
                 Executors.defaultThreadFactory(),
-                ProducerType.SINGLE,         // single producer => HPC
-                new BusySpinWaitStrategy()   // HPC => micro-latency at cost of CPU
+                ProducerType.SINGLE,           // HPC meltdown synergy => single or multi
+                new BusySpinWaitStrategy()     // HPC meltdown synergy => minimal-latency wait strategy
         );
 
-        // aggregator event handling => no missed ticks
+        // aggregatorEventHandler => consumes TickEvents => meltdown synergy aggregator
         disruptor.handleEventsWith(aggregatorHandler);
 
+        // Start the ring buffer consumption
         disruptor.start();
         return disruptor;
     }
